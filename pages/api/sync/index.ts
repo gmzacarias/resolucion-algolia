@@ -1,7 +1,7 @@
 import "dotenv/config"
 import type { NextApiRequest, NextApiResponse } from "next";
 import { productIndex } from "lib/algolia";
-import { getOffseAndLimit } from "lib/request"
+import { getOffsetAndLimit } from "lib/request";
 
 
 const baseId = process.env.AIRTABLE_BASEID
@@ -21,7 +21,7 @@ async function authAirtable(token) {
         }
         )
         const data = await response.json();
-
+        console.log(data)
         const dataRecords = data.records;
         // Si no hay más registros, rompe el bucle
         if (!dataRecords || dataRecords.length === 0) {
@@ -42,22 +42,27 @@ async function authAirtable(token) {
         //     console.log(r.id);
         // }
         // console.log("pagina")
+        if (!data.offset) {
+            // Si no hay "offset" en la respuesta, no hay más registros, rompe el bucle
+            break;
+        }
         offset = data.offset;
     }
     return allRecords
 }
 
 export default async function products(req: NextApiRequest, res: NextApiResponse) {
-    const { offset, limit } = getOffseAndLimit(req, 100, 10000)
+    const { offset, limit } = getOffsetAndLimit(req, 100, 10000)
     try {
         const results = await authAirtable(token)
 
         res.send({
             results: results,
             pagination: {
+                page: Math.floor(offset / limit),
                 offset: offset,
                 limit: limit,
-                // total: lista.length,
+                total: results.length,
             }
         })
     } catch (error) {
